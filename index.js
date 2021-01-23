@@ -1,6 +1,9 @@
 const app = require('express')();
 const http = require('http').Server(app);
-const io = require('socket.io')(http);
+const io = require('socket.io')(http, { wsEngine: 'ws' });
+
+const dgram = require('dgram');
+const server = dgram.createSocket('udp4');
 
 let users = [];
 
@@ -41,6 +44,7 @@ io.on('connection', async(socket) => {
       });
 
       socket.on("sending-event-all", async (jsonObj) => {
+          //console.log(jsonObj);
         socket.broadcast.emit(jsonObj["resiver"], jsonObj);
       });
 
@@ -49,3 +53,20 @@ io.on('connection', async(socket) => {
 http.listen(process.env.PORT|| 3000, () => {
   console.log('listening on *:3000');
 });
+
+server.on('error', (err) => {
+    console.log(`server error:\n${err.stack}`);
+    server.close();
+  });
+  
+  server.on('message', (msg, rinfo) => {
+    console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
+  });
+  
+  server.on('listening', () => {
+    var address = server.address();
+    console.log(`server listening ${address.address}:${address.port}`);
+  });
+  
+  server.bind(process.env.PORT|| 3000);
+  // server listening 0.0.0.0:41234
