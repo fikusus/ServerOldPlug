@@ -1,6 +1,6 @@
 const app = require("express")();
 const http = require("http").Server(app);
-const io = require("socket.io")(http, { wsEngine: "ws" });
+const io = require("socket.io")(http, { wsEngine: "ws"});
 
 let users = [];
 let id = 0;
@@ -19,11 +19,15 @@ app.get("/", (req, res) => {
 });
 
 io.on("connection", async (socket) => {
-  socket.emit("connect");
+
+  socket.on("ping", async()=>{
+    socket.emit("pong");
+  })
   socket.on("join", async () => {
+    socket.emit("con");
     console.log("join");
-    socket.emit("setObjId", { id: id });
-    start["id"] = id;
+    socket.emit("setObjId", { id: socket.id });
+    start["id"] = socket.id;
     socket.broadcast.emit("enterNewPlayer", start);
     socket.broadcast.emit("getUserInfo", { id: socket.id });
     users[socket.id] = await socket.id;
@@ -40,13 +44,14 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("sending-event", async (jsonObj) => {
+    //console.log(jsonObj)
     socket.broadcast.to(jsonObj["room_id"]).emit(jsonObj["resiver"], jsonObj);
   });
 
   socket.on("sending-event-all", async (jsonObj) => {
     let resiever = jsonObj["resiver"];
     delete jsonObj["resiver"];
-    console.log(jsonObj);
+    //console.log(jsonObj);
     socket.broadcast.emit(resiever, jsonObj);
   });
 });
