@@ -1,6 +1,8 @@
 const app = require("express")();
 const http = require("http").Server(app);
-const io = require("socket.io")(http, { wsEngine: "ws"});
+const io = require("socket.io")(http, { wsEngine: "ws" });
+var ntpClient = require("ntp-client");
+let offset_time;
 
 let users = [];
 let id = 0;
@@ -14,17 +16,30 @@ let start = {
   r_w: 0.0,
 };
 
+
+ntpClient.getNetworkTime("time.windows.com", 123, function(err, date) {
+  if(err) {
+      console.error(err);
+      return;
+  }
+
+  console.log("Current time : ");
+ offset_time = new Date() - date;
+
+});
+
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
 
 io.on("connection", async (socket) => {
-
-  socket.on("ping", async()=>{
+  console.log("join");
+  socket.on("ping", async () => {
     socket.emit("pong");
-  })
+  });
   socket.on("join", async () => {
-    socket.emit("con");
+    //let 
+    socket.emit("con", { date: new Date(Date.now() + offset_time).toJSON()});
     console.log("join");
     socket.emit("setObjId", { id: socket.id });
     start["id"] = socket.id;
@@ -45,6 +60,7 @@ io.on("connection", async (socket) => {
 
   socket.on("sending-event", async (jsonObj) => {
     //console.log(jsonObj)
+
     socket.broadcast.to(jsonObj["room_id"]).emit(jsonObj["resiver"], jsonObj);
   });
 
@@ -52,6 +68,7 @@ io.on("connection", async (socket) => {
     let resiever = jsonObj["resiver"];
     delete jsonObj["resiver"];
     //console.log(jsonObj);
+    jsonObj["timestemp"] = new Date(Date.now() + offset_time).toJSON();
     socket.broadcast.emit(resiever, jsonObj);
   });
 });
